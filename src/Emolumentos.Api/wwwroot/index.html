@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Emolumentos</title>
+  <meta name="description" content="Cálculo de emolumentos e custas de atos notariais no Ceará e em Minas Gerais.">
+  <style>
+    :root {
+      color-scheme: light dark;
+      --fundo: #f6f5f1;
+      --cartao: #ffffff;
+      --texto: #1d1d1b;
+      --suave: #62625c;
+      --borda: #d9d7cf;
+      --destaque: #1f5f4a;
+      --erro: #a12a1f;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --fundo: #161614;
+        --cartao: #1f1f1c;
+        --texto: #ecebe6;
+        --suave: #a3a299;
+        --borda: #3a3a35;
+        --destaque: #7fcdb0;
+        --erro: #f09a8f;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 32px 16px 48px;
+      background: var(--fundo);
+      color: var(--texto);
+      font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+    main { max-width: 720px; margin: 0 auto; }
+    h1 { margin: 0 0 4px; font-size: 1.75rem; }
+    h2 { margin: 0 0 12px; font-size: 1.05rem; }
+    p.lead { margin: 0 0 24px; color: var(--suave); }
+    section {
+      background: var(--cartao);
+      border: 1px solid var(--borda);
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    form { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 16px; }
+    label { display: flex; flex-direction: column; gap: 4px; font-size: .9rem; color: var(--suave); }
+    label.larga, form button, #erro { grid-column: 1 / -1; }
+    select, input {
+      width: 100%;
+      padding: 9px 10px;
+      border: 1px solid var(--borda);
+      border-radius: 6px;
+      background: var(--fundo);
+      color: var(--texto);
+      font: inherit;
+    }
+    select:disabled, input:disabled { opacity: .5; }
+    button {
+      padding: 11px;
+      border: 0;
+      border-radius: 6px;
+      background: var(--destaque);
+      color: var(--cartao);
+      font: inherit;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    #erro { margin: 0; color: var(--erro); }
+    .rolagem { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+    th, td { padding: 7px 8px; text-align: left; border-bottom: 1px solid var(--borda); white-space: nowrap; }
+    th { font-size: .8rem; font-weight: 600; color: var(--suave); }
+    .num { text-align: right; }
+    tfoot td { border-bottom: 0; font-weight: 700; font-size: 1.1rem; }
+    .nota { margin: 12px 0 0; font-size: .85rem; color: var(--suave); }
+    footer { font-size: .85rem; color: var(--suave); }
+    a { color: var(--destaque); }
+    [hidden] { display: none !important; }
+    @media (max-width: 520px) { form { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Emolumentos</h1>
+  <p class="lead">Quanto custa um ato notarial no Ceará e em Minas Gerais, com a composição do valor
+    segundo as tabelas oficiais de 2026.</p>
+
+  <section>
+    <form id="pedido">
+      <label>UF
+        <select id="uf" name="uf"></select>
+      </label>
+      <label>Quantidade
+        <input id="quantidade" name="quantidade" type="number" min="1" step="1" value="1" required>
+      </label>
+      <label class="larga">Ato
+        <select id="ato" name="ato"></select>
+      </label>
+      <label>Valor declarado (R$)
+        <input id="valor" name="valor" type="number" min="0.01" step="0.01" placeholder="250000,00">
+      </label>
+      <label>Redução legal
+        <select id="reducao" name="reducao"></select>
+      </label>
+      <button type="submit">Calcular</button>
+      <p id="erro" role="alert" hidden></p>
+    </form>
+  </section>
+
+  <section id="resultado" hidden>
+    <h2 id="titulo"></h2>
+    <div class="rolagem">
+      <table>
+        <thead><tr><th>Parcela</th><th class="num">Por unidade</th><th class="num">Valor</th></tr></thead>
+        <tbody id="parcelas"></tbody>
+        <tfoot><tr><td colspan="2">Total</td><td class="num" id="total"></td></tr></tfoot>
+      </table>
+    </div>
+    <p class="nota" id="fundamento"></p>
+  </section>
+
+  <section id="historico" hidden>
+    <h2>Últimos cálculos</h2>
+    <div class="rolagem">
+      <table>
+        <thead><tr><th>Data</th><th>UF</th><th>Ato</th><th class="num">Qtd.</th><th class="num">Total</th></tr></thead>
+        <tbody id="recentes"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>
+    Projeto de estudo com atos selecionados; não substitui a consulta ao cartório.
+    As regras são as mesmas do aplicativo desktop (C#, WinForms).
+    Código em <a href="https://github.com/jpsalviano/emolumentos">github.com/jpsalviano/emolumentos</a>.
+  </footer>
+</main>
+
+<script>
+  const API = '/api/v1/emolumentos';
+  const COM_VALOR = 'EscrituraComValor';
+  const reais = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+  const dataHora = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+  const $ = id => document.getElementById(id);
+  let tabelas = [];
+  let rotulosDosAtos = {};
+
+  function opcoes(select, itens) {
+    const anterior = select.value;
+    select.replaceChildren(...itens.map(i => new Option(i.rotulo, i.codigo)));
+    if (itens.some(i => i.codigo === anterior)) select.value = anterior;
+  }
+
+  // Só a escritura com valor tem valor declarado e redução, e cada UF tem as suas reduções.
+  function atualizarOpcoes() {
+    const tabela = tabelas.find(t => t.uf === $('uf').value);
+    const comValor = $('ato').value === COM_VALOR;
+    $('valor').disabled = !comValor;
+    $('valor').required = comValor;
+    if (!comValor) $('valor').value = '';
+    opcoes($('reducao'), comValor ? tabela.reducoes : tabela.reducoes.slice(0, 1));
+    $('reducao').disabled = $('reducao').options.length < 2;
+  }
+
+  function linha(celulas) {
+    const tr = document.createElement('tr');
+    for (const [texto, numerica] of celulas) {
+      const td = document.createElement('td');
+      td.textContent = texto;
+      if (numerica) td.className = 'num';
+      tr.append(td);
+    }
+    return tr;
+  }
+
+  function mostrarErro(mensagem) {
+    $('erro').textContent = mensagem;
+    $('erro').hidden = false;
+  }
+
+  async function calcular(evento) {
+    evento.preventDefault();
+    $('erro').hidden = true;
+    const consulta = new URLSearchParams({
+      uf: $('uf').value, ato: $('ato').value, quantidade: $('quantidade').value
+    });
+    if (!$('valor').disabled) {
+      consulta.set('valor', $('valor').value);
+      consulta.set('reducao', $('reducao').value);
+    }
+
+    let resposta;
+    try {
+      resposta = await fetch(`${API}/calculo?${consulta}`);
+    } catch {
+      return mostrarErro('Não foi possível falar com o servidor.');
+    }
+    if (resposta.status === 429) return mostrarErro('Muitas consultas agora. Tente de novo em um minuto.');
+    const corpo = await resposta.json().catch(() => ({}));
+    if (!resposta.ok) return mostrarErro(corpo.erro || 'Não foi possível calcular.');
+
+    $('titulo').textContent = `${corpo.descricao} (${corpo.uf} ${corpo.codigoAto}): ${corpo.quantidade} x ${corpo.unidade}`;
+    $('parcelas').replaceChildren(...corpo.parcelas.map(p =>
+      linha([[p.nome], [reais.format(p.valorUnitario), true], [reais.format(p.valor), true]])));
+    $('total').textContent = reais.format(corpo.total);
+    $('fundamento').textContent = corpo.fundamento;
+    $('resultado').hidden = false;
+    carregarRecentes();
+  }
+
+  async function carregarRecentes() {
+    try {
+      const recentes = await (await fetch(`${API}/calculos/recentes`)).json();
+      $('recentes').replaceChildren(...recentes.map(c => linha([
+        [dataHora.format(new Date(c.criadoEm))], [c.uf], [rotulosDosAtos[c.ato] || c.ato],
+        [String(c.quantidade), true], [reais.format(c.total), true]
+      ])));
+      $('historico').hidden = recentes.length === 0;
+    } catch {
+      $('historico').hidden = true;
+    }
+  }
+
+  async function iniciar() {
+    try {
+      tabelas = await (await fetch(`${API}/tabelas`)).json();
+    } catch {
+      return mostrarErro('Não foi possível carregar as tabelas.');
+    }
+    opcoes($('uf'), tabelas.map(t => ({ codigo: t.uf, rotulo: t.nome })));
+    opcoes($('ato'), tabelas[0].atos);
+    rotulosDosAtos = Object.fromEntries(tabelas[0].atos.map(a => [a.codigo, a.rotulo]));
+    atualizarOpcoes();
+    $('uf').addEventListener('change', atualizarOpcoes);
+    $('ato').addEventListener('change', atualizarOpcoes);
+    $('pedido').addEventListener('submit', calcular);
+    carregarRecentes();
+  }
+
+  iniciar();
+</script>
+</body>
+</html>

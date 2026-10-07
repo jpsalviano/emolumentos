@@ -1,0 +1,148 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: "true"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+
+jobs:
+  # Regras de negócio, presenters, API e, contra bancos de verdade, as migrations e o EF6.
+  testes:
+    runs-on: ubuntu-latest
+    env:
+      SA_PASSWORD: Emolumentos-CI-2026
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: "Y"
+          MSSQL_SA_PASSWORD: Emolumentos-CI-2026
+        ports: ["1433:1433"]
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: emolumentos
+          POSTGRES_PASSWORD: emolumentos
+          POSTGRES_DB: emolumentos
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U emolumentos"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Esperar o SQL Server
+        run: |
+          for tentativa in $(seq 1 30); do
+            if docker exec "${{ job.services.sqlserver.id }}" /opt/mssql-tools18/bin/sqlcmd \
+                -C -S localhost -U sa -P "$SA_PASSWORD" -Q "SELECT 1" > /dev/null 2>&1; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "SQL Server não respondeu" >&2
+          exit 1
+
+      # Independente do código C#: cada script roda duas vezes pelo cliente do próprio banco.
+      - name: Migrations idempotentes no PostgreSQL (psql, duas passadas)
+        env:
+          PGPASSWORD: emolumentos
+        run: |
+          for passada in 1 2; do
+            for script in db/postgresql/*.sql; do
+              echo "passada $passada: $script"
+              psql -v ON_ERROR_STOP=1 -X -q -h localhost -U emolumentos -d emolumentos -f "$script"
+            done
+          done
+
+      - name: Migrations idempotentes no SQL Server (sqlcmd, duas passadas)
+        run: |
+          docker exec "${{ job.services.sqlserver.id }}" /opt/mssql-tools18/bin/sqlcmd \
+            -C -S localhost -U sa -P "$SA_PASSWORD" -b -Q "CREATE DATABASE emolumentos"
+          for passada in 1 2; do
+            for script in db/sqlserver/*.sql; do
+              echo "passada $passada: $script"
+              docker exec -i "${{ job.services.sqlserver.id }}" /opt/mssql-tools18/bin/sqlcmd \
+                -C -S localhost -U sa -P "$SA_PASSWORD" -d emolumentos -b < "$script"
+            done
+          done
+
+      - name: Testes
+        env:
+          EMOLUMENTOS_TESTE_POSTGRESQL: Host=localhost;Database=emolumentos;Username=emolumentos;Password=emolumentos
+          EMOLUMENTOS_TESTE_SQLSERVER: Server=localhost,1433;Database=emolumentos;User Id=sa;Password=${{ env.SA_PASSWORD }};TrustServerCertificate=true
+        run: dotnet test tests/Emolumentos.Testes -c Release --logger "console;verbosity=normal"
+
+  # O aplicativo WinForms em .NET Framework 4.8 só compila em Windows.
+  desktop:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Compilar
+        run: dotnet build src/Emolumentos.Desktop -c Release -o desktop
+      - name: Compactar
+        run: Compress-Archive -Path desktop\* -DestinationPath Emolumentos-desktop.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Emolumentos-desktop
+          path: Emolumentos-desktop.zip
+      - name: Publicar na release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${{ github.ref_name }}" Emolumentos-desktop.zip --title "${{ github.ref_name }}" --generate-notes
+
+  # Imagem da API e da página. Só a main publica no GHCR, e só depois dos testes.
+  imagem:
+    runs-on: ubuntu-latest
+    needs: testes
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        if: github.ref == 'refs/heads/main'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: ${{ github.ref == 'refs/heads/main' }}
+          tags: |
+            ghcr.io/jpsalviano/emolumentos:${{ github.sha }}
+            ghcr.io/jpsalviano/emolumentos:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Subir a imagem e conferir a API
+        if: github.ref == 'refs/heads/main'
+        run: |
+          docker run -d --name api -p 8080:8080 "ghcr.io/jpsalviano/emolumentos:${{ github.sha }}"
+          for tentativa in $(seq 1 20); do
+            if curl -fsS http://localhost:8080/api/v1/emolumentos/health; then
+              curl -fsS "http://localhost:8080/api/v1/emolumentos/calculo?uf=MG&ato=Procuracao" | grep -q '"total":68.94'
+              exit 0
+            fi
+            sleep 1
+          done
+          docker logs api
+          exit 1

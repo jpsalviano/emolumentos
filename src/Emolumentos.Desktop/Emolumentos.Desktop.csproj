@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net48</TargetFramework>
+    <AssemblyName>Emolumentos</AssemblyName>
+    <RootNamespace>Emolumentos.Desktop</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="System.Configuration" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Emolumentos.Apresentacao\Emolumentos.Apresentacao.csproj" />
+    <ProjectReference Include="..\Emolumentos.Dados\Emolumentos.Dados.csproj" />
+    <ProjectReference Include="..\Emolumentos.Dominio\Emolumentos.Dominio.csproj" />
+  </ItemGroup>
+
+</Project>
