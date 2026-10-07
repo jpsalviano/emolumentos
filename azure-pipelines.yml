@@ -1,0 +1,42 @@
+# Pipeline do Azure DevOps: testes e build do desktop a cada push e pull request.
+# Os testes contra SQL Server e PostgreSQL rodam no GitHub Actions (.github/workflows/ci.yml),
+# que sobe os dois bancos; aqui eles são ignorados por falta das connection strings.
+
+trigger:
+  branches:
+    include: [main]
+
+pr:
+  branches:
+    include: [main]
+
+pool:
+  vmImage: windows-latest
+
+variables:
+  DOTNET_NOLOGO: "true"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+
+steps:
+  - task: UseDotNet@2
+    displayName: SDK do .NET
+    inputs:
+      packageType: sdk
+      version: 10.0.x
+
+  - script: dotnet test tests/Emolumentos.Testes -c Release --logger trx
+    displayName: Testes
+
+  - task: PublishTestResults@2
+    displayName: Publicar resultado dos testes
+    condition: succeededOrFailed()
+    inputs:
+      testResultsFormat: VSTest
+      testResultsFiles: "**/*.trx"
+
+  - script: dotnet build src/Emolumentos.Desktop -c Release -o $(Build.ArtifactStagingDirectory)/desktop
+    displayName: Compilar o desktop (.NET Framework 4.8)
+
+  - publish: $(Build.ArtifactStagingDirectory)/desktop
+    artifact: Emolumentos-desktop
+    displayName: Publicar o desktop

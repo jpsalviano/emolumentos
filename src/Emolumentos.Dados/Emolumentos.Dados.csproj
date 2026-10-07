@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- net48 para o desktop; netstandard2.1 para a API e os testes. O código é o mesmo. -->
+  <PropertyGroup>
+    <TargetFrameworks>net48;netstandard2.1</TargetFrameworks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="EntityFramework" Version="6.5.1" />
+    <PackageReference Include="EntityFramework6.Npgsql" Version="6.4.3" />
+    <!-- O provider pede Npgsql 4.1.3, que tem falha conhecida (GHSA-x9vc-6hfv-hg8c); a 4.1.14 corrige. -->
+    <PackageReference Include="Npgsql" Version="4.1.14" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Emolumentos.Dominio\Emolumentos.Dominio.csproj" />
+  </ItemGroup>
+
+  <!-- As migrations viajam dentro da DLL, com o nome "<banco>/<arquivo>.sql". -->
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\db\sqlserver\*.sql" LogicalName="sqlserver/%(Filename)%(Extension)" />
+    <EmbeddedResource Include="..\..\db\postgresql\*.sql" LogicalName="postgresql/%(Filename)%(Extension)" />
+  </ItemGroup>
+
+</Project>

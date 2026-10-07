@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Presenters e contratos de view, sem referência a WinForms: testáveis em qualquer runtime. -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Emolumentos.Dominio\Emolumentos.Dominio.csproj" />
+  </ItemGroup>
+
+</Project>
