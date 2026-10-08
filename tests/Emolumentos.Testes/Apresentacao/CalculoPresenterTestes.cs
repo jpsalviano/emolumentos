@@ -26,13 +26,33 @@ public class CalculoPresenterTestes
     }
 
     [Test]
+    public void Abre_na_escritura_com_valor_que_usa_todos_os_campos()
+    {
+        Assert.That(_view.AtoSelecionado, Is.EqualTo(TipoAto.EscrituraComValor));
+        Assert.That(_view.ValorHabilitado, Is.True);
+    }
+
+    [Test]
     public void Valor_declarado_so_e_pedido_na_escritura_com_valor()
     {
+        _view.Selecionar(Uf.CE, TipoAto.Procuracao);
         Assert.That(_view.ValorHabilitado, Is.False);
 
         _view.Selecionar(Uf.CE, TipoAto.EscrituraComValor);
-
         Assert.That(_view.ValorHabilitado, Is.True);
+    }
+
+    [Test]
+    public void Orientacao_explica_cada_campo_desabilitado()
+    {
+        _view.Selecionar(Uf.MG, TipoAto.Procuracao);
+        Assert.That(_view.Orientacao, Is.EqualTo(CalculoPresenter.OrientacaoValorFixo));
+
+        _view.Selecionar(Uf.CE, TipoAto.EscrituraComValor);
+        Assert.That(_view.Orientacao, Is.EqualTo(CalculoPresenter.OrientacaoSemReducao));
+
+        _view.Selecionar(Uf.MG, TipoAto.EscrituraComValor);
+        Assert.That(_view.Orientacao, Is.Empty);
     }
 
     [Test]
@@ -124,6 +144,7 @@ public class CalculoPresenterTestes
     public void Falha_ao_gravar_nao_esconde_o_resultado()
     {
         _historico.FalharAoRegistrar = true;
+        _view.Selecionar(Uf.CE, TipoAto.ReconhecimentoFirma);
 
         _view.Calcular();
 
@@ -137,6 +158,7 @@ public class CalculoPresenterTestes
     {
         var view = new ViewFalsa();
         new CalculoPresenter(view, new CatalogoTabelas(), null, () => Agora).Iniciar();
+        view.Selecionar(Uf.CE, TipoAto.ReconhecimentoFirma);
 
         view.Calcular();
 
@@ -174,6 +196,8 @@ public class CalculoPresenterTestes
 
         public bool ValorHabilitado { get; private set; }
 
+        public string? Orientacao { get; private set; }
+
         public ResultadoExibido? Resultado { get; private set; }
 
         public string? Erro { get; private set; }
@@ -200,7 +224,11 @@ public class CalculoPresenterTestes
 
         public void ExibirReducoes(IReadOnlyList<ReducaoLegal> reducoes) => Reducoes = reducoes;
 
+        public void SelecionarAto(TipoAto ato) => AtoSelecionado = ato;
+
         public void HabilitarValorDeclarado(bool habilitado) => ValorHabilitado = habilitado;
+
+        public void ExibirOrientacao(string texto) => Orientacao = texto;
 
         public void ExibirResultado(ResultadoExibido resultado) => Resultado = resultado;
 

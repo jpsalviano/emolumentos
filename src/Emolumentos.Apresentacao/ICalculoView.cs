@@ -30,9 +30,14 @@ namespace Emolumentos.Apresentacao
 
         void ExibirAtos(IReadOnlyList<TipoAto> atos);
 
+        void SelecionarAto(TipoAto ato);
+
         void ExibirReducoes(IReadOnlyList<ReducaoLegal> reducoes);
 
         void HabilitarValorDeclarado(bool habilitado);
+
+        /// <summary>Por que um campo está desabilitado; vazio quando todos estão liberados.</summary>
+        void ExibirOrientacao(string texto);
 
         void ExibirResultado(ResultadoExibido resultado);
 

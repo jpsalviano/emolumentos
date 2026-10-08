@@ -48,7 +48,8 @@
     }
     form { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 16px; }
     label { display: flex; flex-direction: column; gap: 4px; font-size: .9rem; color: var(--suave); }
-    label.larga, form button, #erro { grid-column: 1 / -1; }
+    label.larga, form button, #erro, #orientacao { grid-column: 1 / -1; }
+    #orientacao { margin: 0; font-size: .85rem; color: var(--suave); }
     select, input {
       width: 100%;
       padding: 9px 10px;
@@ -106,6 +107,7 @@
       <label>Redução legal
         <select id="reducao" name="reducao"></select>
       </label>
+      <p id="orientacao" hidden></p>
       <button type="submit">Calcular</button>
       <p id="erro" role="alert" hidden></p>
     </form>
@@ -164,6 +166,12 @@
     if (!comValor) $('valor').value = '';
     opcoes($('reducao'), comValor ? tabela.reducoes : tabela.reducoes.slice(0, 1));
     $('reducao').disabled = $('reducao').options.length < 2;
+    // Os mesmos textos do aplicativo desktop (CalculoPresenter).
+    $('orientacao').textContent =
+      !comValor ? 'Ato de valor fixo na tabela: sem valor declarado nem redução.'
+      : $('reducao').disabled ? 'A tabela desta UF não prevê redução legal.'
+      : '';
+    $('orientacao').hidden = !$('orientacao').textContent;
   }
 
   function linha(celulas) {
@@ -233,6 +241,8 @@
     }
     opcoes($('uf'), tabelas.map(t => ({ codigo: t.uf, rotulo: t.nome })));
     opcoes($('ato'), tabelas[0].atos);
+    // A página abre no ato que usa todos os campos; nos demais, dois deles ficam desabilitados.
+    $('ato').value = COM_VALOR;
     rotulosDosAtos = Object.fromEntries(tabelas[0].atos.map(a => [a.codigo, a.rotulo]));
     atualizarOpcoes();
     $('uf').addEventListener('change', atualizarOpcoes);
