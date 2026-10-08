@@ -24,6 +24,7 @@ namespace Emolumentos.Desktop
             this.txtQuantidade = new System.Windows.Forms.TextBox();
             this.lblValor = new System.Windows.Forms.Label();
             this.txtValor = new System.Windows.Forms.TextBox();
+            this.lblOrientacao = new System.Windows.Forms.Label();
             this.lblReducao = new System.Windows.Forms.Label();
             this.cboReducao = new System.Windows.Forms.ComboBox();
             this.btnCalcular = new System.Windows.Forms.Button();
@@ -109,6 +110,14 @@ namespace Emolumentos.Desktop
             this.txtValor.Name = "txtValor";
             this.txtValor.Size = new System.Drawing.Size(140, 20);
             this.txtValor.TabIndex = 3;
+            //
+            // lblOrientacao
+            //
+            this.lblOrientacao.AutoEllipsis = true;
+            this.lblOrientacao.ForeColor = System.Drawing.SystemColors.GrayText;
+            this.lblOrientacao.Location = new System.Drawing.Point(280, 109);
+            this.lblOrientacao.Name = "lblOrientacao";
+            this.lblOrientacao.Size = new System.Drawing.Size(388, 16);
             //
             // lblReducao
             //
@@ -282,6 +291,7 @@ namespace Emolumentos.Desktop
             this.Controls.Add(this.txtQuantidade);
             this.Controls.Add(this.lblValor);
             this.Controls.Add(this.txtValor);
+            this.Controls.Add(this.lblOrientacao);
             this.Controls.Add(this.lblReducao);
             this.Controls.Add(this.cboReducao);
             this.Controls.Add(this.btnCalcular);
@@ -309,6 +319,7 @@ namespace Emolumentos.Desktop
         private System.Windows.Forms.TextBox txtQuantidade;
         private System.Windows.Forms.Label lblValor;
         private System.Windows.Forms.TextBox txtValor;
+        private System.Windows.Forms.Label lblOrientacao;
         private System.Windows.Forms.Label lblReducao;
         private System.Windows.Forms.ComboBox cboReducao;
         private System.Windows.Forms.Button btnCalcular;

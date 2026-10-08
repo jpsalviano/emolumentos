@@ -11,6 +11,11 @@ namespace Emolumentos.Apresentacao
     {
         public const string Origem = "desktop";
 
+        public const string OrientacaoValorFixo =
+            "Ato de valor fixo na tabela: sem valor declarado nem redução.";
+
+        public const string OrientacaoSemReducao = "A tabela desta UF não prevê redução legal.";
+
         private const int LinhasDoHistorico = 20;
         private static readonly CultureInfo Cultura = CultureInfo.GetCultureInfo("pt-BR");
 
@@ -36,6 +41,8 @@ namespace Emolumentos.Apresentacao
         {
             _view.ExibirUfs(_catalogo.Todas.Select(t => t.Uf).ToList());
             _view.ExibirAtos(Enum.GetValues(typeof(TipoAto)).Cast<TipoAto>().ToList());
+            // A tela abre no ato que usa todos os campos; nos demais, dois deles ficam desabilitados.
+            _view.SelecionarAto(TipoAto.EscrituraComValor);
             AtualizarOpcoes();
             CarregarHistorico();
         }
@@ -46,10 +53,14 @@ namespace Emolumentos.Apresentacao
             _view.HabilitarValorDeclarado(comValor);
 
             // Só a escritura com valor admite redução, e cada UF tem as suas.
-            IEnumerable<ReducaoLegal> reducoes = comValor
-                ? _catalogo.Obter(_view.UfSelecionada).ReducoesAdmitidas
-                : new[] { ReducaoLegal.Nenhuma };
-            _view.ExibirReducoes(reducoes.ToList());
+            List<ReducaoLegal> reducoes = comValor
+                ? _catalogo.Obter(_view.UfSelecionada).ReducoesAdmitidas.ToList()
+                : new List<ReducaoLegal> { ReducaoLegal.Nenhuma };
+            _view.ExibirReducoes(reducoes);
+
+            _view.ExibirOrientacao(!comValor ? OrientacaoValorFixo
+                : reducoes.Count < 2 ? OrientacaoSemReducao
+                : string.Empty);
         }
 
         private void Calcular()

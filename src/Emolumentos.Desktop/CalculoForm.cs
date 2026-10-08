@@ -57,6 +57,19 @@ namespace Emolumentos.Desktop
             Preencher(cboAto, atos, Rotulos.De);
         }
 
+        public void SelecionarAto(TipoAto ato)
+        {
+            _preenchendo = true;
+            try
+            {
+                cboAto.SelectedItem = new Opcao<TipoAto>(ato, Rotulos.De(ato));
+            }
+            finally
+            {
+                _preenchendo = false;
+            }
+        }
+
         public void ExibirReducoes(IReadOnlyList<ReducaoLegal> reducoes)
         {
             Preencher(cboReducao, reducoes, Rotulos.De);
@@ -70,6 +83,11 @@ namespace Emolumentos.Desktop
             {
                 txtValor.Clear();
             }
+        }
+
+        public void ExibirOrientacao(string texto)
+        {
+            lblOrientacao.Text = texto;
         }
 
         public void ExibirResultado(ResultadoExibido resultado)
